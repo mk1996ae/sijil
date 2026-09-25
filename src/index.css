@@ -204,6 +204,21 @@ button {
   }
 }
 
+@media (max-width: 640px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .topbar-spacer {
+    display: none;
+  }
+  .link-status {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
 .stack {
   display: flex;
   flex-direction: column;

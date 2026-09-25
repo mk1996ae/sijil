@@ -30,29 +30,6 @@ export default function Brief({ patient, all, shared, lifestyle, lifestyleShared
       </div>
 
       <div className="card-body">
-        <div className="stat-strip">
-          <div className="stat">
-            <b>{brief.stats.records}</b>
-            <span>Records</span>
-          </div>
-          <div className="stat">
-            <b>{brief.stats.verified}</b>
-            <span>Verified</span>
-          </div>
-          <div className="stat">
-            <b>{brief.stats.patient}</b>
-            <span>Patient</span>
-          </div>
-          <div className="stat">
-            <b>{brief.stats.institutions}</b>
-            <span>Institutions</span>
-          </div>
-          <div className="stat">
-            <b>{brief.stats.countries}</b>
-            <span>Countries</span>
-          </div>
-        </div>
-
         {brief.sections.map((s) => (
           <div className="brief-section" key={s.key}>
             <h3>{s.title}</h3>
@@ -80,6 +57,12 @@ export default function Brief({ patient, all, shared, lifestyle, lifestyleShared
 
         <div className="safety">
           Relevant historical context from the patient’s own records — not a diagnosis or treatment recommendation. Discuss with the treating clinician.
+        </div>
+        <div className="engine-row">
+          <span>
+            Built from {brief.stats.records} records · {brief.stats.verified} provider-verified · {brief.stats.patient} patient-reported ·{' '}
+            {brief.stats.institutions} institutions · {brief.stats.countries} countries
+          </span>
         </div>
       </div>
     </section>

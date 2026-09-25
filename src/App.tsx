@@ -7,7 +7,7 @@ import Passport from './components/Passport'
 import SourceModal from './components/SourceModal'
 import SourcesCard from './components/SourcesCard'
 import Timeline from './components/Timeline'
-import { SCOPES, events as seedEvents, incomingEvent, initialGrant, lifestyle, patient, sources } from './data/patient'
+import { SCOPES, TODAY, events as seedEvents, incomingEvent, initialGrant, lifestyle, patient, sources } from './data/patient'
 import type { AccessGrant, AccessLogEntry } from './data/types'
 import { inScope } from './engine/util'
 import { IconCheck, IconLock, IconShield, IconStethoscope, IconUser } from './ui/Icons'
@@ -46,6 +46,15 @@ export default function App() {
     setLog((prev) => [entry, ...prev])
   }
 
+  function logBriefView() {
+    addLog({ time: now(), actor: grant.clinician, action: 'Viewed the 30-second brief', detail: grant.institution, kind: 'view' })
+  }
+
+  function goTo(next: Tab) {
+    if (next === 'clinician' && tab !== 'clinician' && grant.active) logBriefView()
+    setTab(next)
+  }
+
   function handleGrant(scopes: Record<string, boolean>, hours: number) {
     const labels = SCOPES.filter((s) => scopes[s.key]).map((s) => s.label)
     setGrant({ ...grant, scopes, expiresHours: hours, grantedAt: now(), active: true })
@@ -57,8 +66,16 @@ export default function App() {
       detail: labels.join(' · '),
       kind: 'grant',
     })
+    logBriefView()
     setToast(`Access granted to ${grant.clinician} for ${hours} h`)
     setTab('clinician')
+  }
+
+  function handleAddNote(eventId: string, text: string) {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, patientAnnotations: [...(e.patientAnnotations ?? []), { date: TODAY, text }] } : e)),
+    )
+    setToast(`Note added to ${eventId} — the clinician record itself is unchanged`)
   }
 
   function handleRevoke() {
@@ -70,7 +87,9 @@ export default function App() {
 
   function handleOpenSource(id: string) {
     setSourceId(id)
-    if (tab === 'clinician') addLog({ time: now(), actor: grant.clinician, action: `Opened source record ${id}`, kind: 'view' })
+    const ev = events.find((e) => e.id === id)
+    if (tab === 'clinician' && ev)
+      addLog({ time: now(), actor: grant.clinician, action: `Opened source record ${id}`, detail: `${ev.title} · ${ev.provenance.institution}`, kind: 'view' })
   }
 
   function handleQuery(question: string, retrieved: number) {
@@ -103,10 +122,10 @@ export default function App() {
         </div>
 
         <div className="segmented" role="group" aria-label="Switch view">
-          <button type="button" aria-pressed={tab === 'patient'} onClick={() => setTab('patient')}>
+          <button type="button" aria-pressed={tab === 'patient'} onClick={() => goTo('patient')}>
             <IconUser size={14} /> Patient
           </button>
-          <button type="button" aria-pressed={tab === 'clinician'} onClick={() => setTab('clinician')}>
+          <button type="button" aria-pressed={tab === 'clinician'} onClick={() => goTo('clinician')}>
             <IconStethoscope size={14} /> Clinician
           </button>
         </div>
@@ -123,7 +142,7 @@ export default function App() {
           <div className="columns">
             <div className="stack">
               <Passport patient={patient} events={events} />
-              <Timeline events={events} flashId={filed ? incomingEvent.id : null} />
+              <Timeline events={events} flashId={filed ? incomingEvent.id : null} onAddNote={handleAddNote} />
             </div>
             <div className="stack">
               <AccessCard grant={grant} log={log} onShare={() => setConsentOpen(true)} onRevoke={handleRevoke} />

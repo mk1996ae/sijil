@@ -4,6 +4,11 @@ import { SUGGESTED, askGrounded, type Answer } from '../engine/ask'
 import { IconArrow, IconSpark } from '../ui/Icons'
 import Cite from './Cite'
 
+const KIND_LABEL: Record<string, string> = {
+  patient: 'Patient-reported',
+  gap: 'Gap in record',
+}
+
 interface Props {
   shared: HealthEvent[]
   onOpenSource: (id: string) => void
@@ -13,6 +18,8 @@ interface Props {
 export default function Ask({ shared, onOpenSource, onQuery }: Props) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<Answer | null>(null)
+  const statements = answer ? answer.claims.filter((c) => c.kind !== 'none').length : 0
+  const cited = answer ? answer.claims.filter((c) => c.kind !== 'none' && c.cites.length > 0).length : 0
 
   function run(q: string) {
     const text = q.trim()
@@ -70,6 +77,7 @@ export default function Ask({ shared, onOpenSource, onQuery }: Props) {
                 <span>
                   {c.text}
                   <Cite ids={c.cites} onOpen={onOpenSource} />
+                  {KIND_LABEL[c.kind] && <span className={`chip ${c.kind === 'gap' ? 'chip-warn' : 'chip-patient'}`}>{KIND_LABEL[c.kind]}</span>}
                 </span>
               </div>
             ))}
@@ -77,11 +85,11 @@ export default function Ask({ shared, onOpenSource, onQuery }: Props) {
             {answer.match && (
               <div className="match">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <strong style={{ fontSize: 13.5 }}>Closest earlier episode — {answer.match.label}</strong>
+                  <strong style={{ fontSize: 13.5 }}>
+                    {answer.match.label} — {answer.match.matched} of {answer.match.total} factors
+                  </strong>
                   <span className="spacer" />
-                  <span className="chip chip-verified">
-                    {answer.match.matched} of {answer.match.total} factors match
-                  </span>
+                  <span className="chip chip-verified">Closest earlier episode</span>
                 </div>
                 <div className="match-bar">
                   <i style={{ width: `${(answer.match.matched / Math.max(1, answer.match.total)) * 100}%` }} />
@@ -104,7 +112,8 @@ export default function Ask({ shared, onOpenSource, onQuery }: Props) {
             <div className="engine-row">
               <span className="chip">Grounded engine</span>
               <span>
-                {answer.considered} Health Events considered · {answer.retrieved.length} cited · {answer.ms} ms
+                {statements > 0 ? `${cited} of ${statements} statements cited · ` : 'No matching record — nothing to cite · '}
+                {answer.considered} Health Events considered · {answer.ms} ms
               </span>
               {answer.note && <span className="chip chip-warn">{answer.note}</span>}
             </div>

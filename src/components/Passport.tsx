@@ -1,5 +1,5 @@
 import type { HealthEvent, Patient } from '../data/types'
-import { IconGlobe, IconShield } from '../ui/Icons'
+import { IconAlert, IconGlobe, IconShield } from '../ui/Icons'
 
 interface Props {
   patient: Patient
@@ -10,6 +10,7 @@ export default function Passport({ patient, events }: Props) {
   const verified = events.filter((e) => e.provenance.verification === 'provider_verified').length
   const institutions = new Set(events.filter((e) => e.provenance.channel !== 'patient').map((e) => e.provenance.institution)).size
   const countries = new Set(events.map((e) => e.provenance.country)).size
+  const allergies = events.flatMap((e) => e.allergies ?? []).filter((a, i, arr) => arr.findIndex((b) => b.substance === a.substance) === i)
   const initials = patient.name
     .split(' ')
     .map((p) => p[0])
@@ -22,7 +23,9 @@ export default function Passport({ patient, events }: Props) {
         <div className="avatar">{initials}</div>
         <div>
           <h1>{patient.name}</h1>
-          <div className="ar">{patient.nameAr}</div>
+          <div className="ar" dir="rtl" lang="ar">
+            {patient.nameAr}
+          </div>
           <div className="passport-id">{patient.id}</div>
         </div>
         <div className="spacer" />
@@ -61,6 +64,11 @@ export default function Passport({ patient, events }: Props) {
       </dl>
 
       <div className="passport-stats">
+        {allergies.map((a) => (
+          <span className="chip chip-warn" key={a.substance} title={a.reaction}>
+            <IconAlert size={12} /> Allergy: {a.substance}
+          </span>
+        ))}
         <span className="chip">{events.length} Health Events</span>
         <span className="chip">{verified} clinician-verified</span>
         <span className="chip">{events.length - verified} patient-reported</span>

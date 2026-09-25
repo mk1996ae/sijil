@@ -4,8 +4,8 @@ import EventCard from './EventCard'
 
 const FILTERS: { key: string; label: string; match: (e: HealthEvent) => boolean }[] = [
   { key: 'all', label: 'All', match: () => true },
-  { key: 'clinical', label: 'Clinical', match: (e) => e.provenance.verification === 'provider_verified' },
-  { key: 'mine', label: 'Mine', match: (e) => e.provenance.verification === 'patient_reported' },
+  { key: 'clinical', label: 'Clinician-verified', match: (e) => e.provenance.verification === 'provider_verified' },
+  { key: 'mine', label: 'Patient-reported', match: (e) => e.provenance.verification === 'patient_reported' },
   { key: 'meds', label: 'Medications', match: (e) => e.type === 'prescription' || e.type === 'medication_change' },
   { key: 'labs', label: 'Labs', match: (e) => e.type === 'lab' },
 ]
@@ -15,9 +15,10 @@ interface Props {
   /** Event id to highlight (e.g. the visit that just synced in). */
   flashId?: string | null
   openId?: string | null
+  onAddNote?: (eventId: string, text: string) => void
 }
 
-export default function Timeline({ events, flashId, openId }: Props) {
+export default function Timeline({ events, flashId, openId, onAddNote }: Props) {
   const [filter, setFilter] = useState('all')
   const [open, setOpen] = useState<string | null>(openId ?? null)
 
@@ -55,7 +56,13 @@ export default function Timeline({ events, flashId, openId }: Props) {
               {newYear && <div className="tl-year">{year}</div>}
               <div className="event">
                 <span className={`event-node${e.tags.includes('current') ? ' current' : patient ? ' patient' : ''}`} />
-                <EventCard event={e} open={open === e.id} flash={flashId === e.id} onToggle={() => setOpen(open === e.id ? null : e.id)} />
+                <EventCard
+                  event={e}
+                  open={open === e.id}
+                  flash={flashId === e.id}
+                  onToggle={() => setOpen(open === e.id ? null : e.id)}
+                  onAddNote={onAddNote ? (text) => onAddNote(e.id, text) : undefined}
+                />
               </div>
             </div>
           )

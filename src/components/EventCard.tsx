@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import type { HealthEvent } from '../data/types'
+import { TODAY } from '../data/patient'
 import { TYPE_LABEL, fmtDate } from '../engine/util'
-import { IconCheck, IconDoc, IconSync, IconUser } from '../ui/Icons'
+import { IconCheck, IconDoc, IconLock, IconSync, IconUser } from '../ui/Icons'
 import Sparkline from './Sparkline'
 
 const CHANNEL_LABEL = {
-  provider_api: 'Provider API sync',
+  provider_api: 'Hospital API',
   authorized_entry: 'Authorized entry',
   patient: 'Patient entry',
 } as const
@@ -14,12 +16,23 @@ interface Props {
   open: boolean
   flash?: boolean
   onToggle: () => void
+  /** Present only when the viewer is the patient: lets them annotate a locked clinician record. */
+  onAddNote?: (text: string) => void
 }
 
-export default function EventCard({ event: e, open, flash, onToggle }: Props) {
+export default function EventCard({ event: e, open, flash, onToggle, onAddNote }: Props) {
   const p = e.provenance
   const verified = p.verification === 'provider_verified'
   const isCurrent = e.tags.includes('current')
+  const [note, setNote] = useState('')
+  const canAnnotate = verified && !!onAddNote
+
+  function submitNote() {
+    const text = note.trim()
+    if (!text || !onAddNote) return
+    onAddNote(text)
+    setNote('')
+  }
 
   return (
     <article className={`event-card${open ? ' open' : ''}${flash ? ' flash' : ''}`}>
@@ -30,7 +43,7 @@ export default function EventCard({ event: e, open, flash, onToggle }: Props) {
           <span className="chip">{TYPE_LABEL[e.type]}</span>
           <span className={`chip ${verified ? 'chip-verified' : 'chip-patient'}`}>
             {verified ? <IconCheck size={11} /> : <IconUser size={11} />}
-            {verified ? 'Clinician-verified' : 'Patient-reported'}
+            {verified ? `Provider-verified · ${CHANNEL_LABEL[p.channel]}` : 'Patient-reported'}
           </span>
           {isCurrent && <span className="chip chip-new">Current</span>}
         </div>
@@ -111,6 +124,10 @@ export default function EventCard({ event: e, open, flash, onToggle }: Props) {
             <div className="detail-block">
               <h4>Symptom trend</h4>
               <Sparkline series={e.series} />
+              <div className="kv">
+                <span>Severity by day</span>
+                <span>{e.series.map((s) => `D${s.day}: ${s.severity}`).join(' · ')}</span>
+              </div>
             </div>
           )}
           {!!e.plan?.length && (
@@ -158,18 +175,40 @@ export default function EventCard({ event: e, open, flash, onToggle }: Props) {
               <p>{e.notes}</p>
             </div>
           )}
-          {!!e.patientAnnotations?.length && (
+          {(!!e.patientAnnotations?.length || canAnnotate) && (
             <div className="detail-block">
               <h4>Patient annotations</h4>
-              {e.patientAnnotations.map((a) => (
+              {e.patientAnnotations?.map((a) => (
                 <div className="annotation" key={a.date + a.text}>
                   {fmtDate(a.date)} — {a.text}
                 </div>
               ))}
-              <p className="tiny muted" style={{ marginTop: 6 }}>
-                Patients can add context. The clinician-verified record itself cannot be edited.
-              </p>
+              {canAnnotate && (
+                <form
+                  className="ask-form"
+                  style={{ marginTop: 8 }}
+                  onSubmit={(ev) => {
+                    ev.preventDefault()
+                    submitNote()
+                  }}
+                >
+                  <input
+                    value={note}
+                    onChange={(ev) => setNote(ev.target.value)}
+                    placeholder={`Add a note (dated ${fmtDate(TODAY)})`}
+                    aria-label={`Add a patient note to ${e.id}`}
+                  />
+                  <button type="submit" className="btn btn-sm" disabled={!note.trim()}>
+                    Add note
+                  </button>
+                </form>
+              )}
             </div>
+          )}
+          {verified && (
+            <p className="tiny muted" style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 12px' }}>
+              <IconLock size={12} /> Locked clinician record — the patient can annotate, not edit.
+            </p>
           )}
 
           <div className="provenance">
