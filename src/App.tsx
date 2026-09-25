@@ -143,10 +143,10 @@ export default function App() {
             <div className="stack">
               <Passport patient={patient} events={events} />
               <Timeline events={events} flashId={filed ? incomingEvent.id : null} onAddNote={handleAddNote} />
+              <LifestyleCard lifestyle={lifestyle} onOpenSource={handleOpenSource} />
             </div>
             <div className="stack">
               <AccessCard grant={grant} log={log} onShare={() => setConsentOpen(true)} onRevoke={handleRevoke} />
-              <LifestyleCard lifestyle={lifestyle} />
               <SourcesCard sources={sources} />
             </div>
           </div>
